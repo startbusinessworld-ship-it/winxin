@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Head from "next/head";
+
+const SUPABASE_URL = "https://ulplyswdnneripnppyvb.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVscGx5c3dkbm5lcmlwbnBweXZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxOTM4NjcsImV4cCI6MjA4OTc2OTg2N30.DMysw_S5bxDJ64-5SVoRKbJjZH0aUDceWH3PKDXO47M";
 
 const categories = [
   { id: "tous", label: "Tous", color: "#5F5E5A", bg: "#F1EFE8" },
@@ -13,56 +16,58 @@ const categories = [
   { id: "buro", label: "Bureau & Papeterie", color: "#444441", bg: "#F1EFE8" },
 ];
 
-const products = [
-  { id:1, nom:"Écouteurs TWS Pro", emoji:"🎧", prix:4.20, unite:"€/u", moq:"MOQ 100u", categorie:"tech" },
-  { id:2, nom:"Chargeur USB-C 65W GaN", emoji:"🔌", prix:2.80, unite:"€/u", moq:"MOQ 200u", categorie:"tech" },
-  { id:3, nom:"Batterie externe 20000mAh", emoji:"🔋", prix:7.50, unite:"€/u", moq:"MOQ 50u", categorie:"tech" },
-  { id:4, nom:"Montre connectée sport", emoji:"⌚", prix:11.90, unite:"€/u", moq:"MOQ 50u", categorie:"tech" },
-  { id:5, nom:"Enceinte Bluetooth étanche", emoji:"🔊", prix:8.60, unite:"€/u", moq:"MOQ 100u", categorie:"tech" },
-  { id:6, nom:"T-shirt coton 200g unisexe", emoji:"👕", prix:1.80, unite:"€/u", moq:"MOQ 200u", categorie:"textile" },
-  { id:7, nom:"Veste coupe-vent légère", emoji:"🧥", prix:6.50, unite:"€/u", moq:"MOQ 100u", categorie:"textile" },
-  { id:8, nom:"Chaussettes sport lot x12", emoji:"🧦", prix:2.10, unite:"€/lot", moq:"MOQ 100 lots", categorie:"textile" },
-  { id:9, nom:"Sac à dos imperméable", emoji:"🎒", prix:5.90, unite:"€/u", moq:"MOQ 100u", categorie:"textile" },
-  { id:10, nom:"Lampe LED de bureau", emoji:"💡", prix:3.90, unite:"€/u", moq:"MOQ 100u", categorie:"maison" },
-  { id:11, nom:"Tapis salon antidérapant", emoji:"🪣", prix:8.20, unite:"€/u", moq:"MOQ 50u", categorie:"maison" },
-  { id:12, nom:"Organisateur cuisine", emoji:"🍳", prix:2.40, unite:"€/u", moq:"MOQ 150u", categorie:"maison" },
-  { id:13, nom:"Tapis de yoga TPE 6mm", emoji:"🧘", prix:4.10, unite:"€/u", moq:"MOQ 100u", categorie:"sport" },
-  { id:14, nom:"Bouteille thermos 500ml", emoji:"🧴", prix:2.90, unite:"€/u", moq:"MOQ 200u", categorie:"sport" },
-  { id:15, nom:"Sérum visage vitamine C", emoji:"✨", prix:1.60, unite:"€/u", moq:"MOQ 300u", categorie:"beaute" },
-  { id:16, nom:"Brosse à dents électrique", emoji:"🪥", prix:3.30, unite:"€/u", moq:"MOQ 100u", categorie:"beaute" },
-  { id:17, nom:"Voiture télécommandée", emoji:"🚗", prix:5.50, unite:"€/u", moq:"MOQ 50u", categorie:"jouets" },
-  { id:18, nom:"Puzzle 1000 pièces", emoji:"🧩", prix:2.20, unite:"€/u", moq:"MOQ 100u", categorie:"jouets" },
-  { id:19, nom:"Support téléphone voiture", emoji:"📱", prix:1.20, unite:"€/u", moq:"MOQ 300u", categorie:"auto" },
-  { id:20, nom:"Aspirateur voiture 12V", emoji:"🚙", prix:6.80, unite:"€/u", moq:"MOQ 50u", categorie:"auto" },
-  { id:21, nom:"Stylo multifonction", emoji:"🖊️", prix:0.55, unite:"€/u", moq:"MOQ 500u", categorie:"buro" },
-  { id:22, nom:"Agenda 2025 rigide A5", emoji:"📓", prix:1.90, unite:"€/u", moq:"MOQ 200u", categorie:"buro" },
-];
+function getRemise(remises, qty) {
+  if (!remises || !Array.isArray(remises)) return 0;
+  let pct = 0;
+  for (const r of remises) { if (qty >= r.qte) pct = r.pct; }
+  return pct;
+}
 
 export default function Home() {
   const [activecat, setActivecat] = useState("tous");
   const [cart, setCart] = useState({});
+  const [quantities, setQuantities] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(SUPABASE_URL + "/rest/v1/Produits?select=*", {
+      headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY },
+    })
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setProducts(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
   const getCat = (id) => categories.find((c) => c.id === id) || categories[0];
   const filteredProducts = activecat === "tous" ? products : products.filter((p) => p.categorie === activecat);
-  const addToCart = (id) => setCart((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  const cartQty = Object.values(cart).reduce((a, b) => a + b, 0);
-  const cartTotal = Object.entries(cart).reduce((acc, [id, qty]) => {
-    const p = products.find((x) => x.id == id);
-    return acc + (p ? p.prix * qty : 0);
-  }, 0);
+  const getQty = (id, min) => quantities[id] !== undefined ? quantities[id] : (min || 1);
+  const setQty = (id, val, min) => {
+    const minimum = min || 1;
+    const newVal = Math.max(minimum, parseInt(val) || minimum);
+    setQuantities((prev) => ({ ...prev, [id]: newVal }));
+  };
+  const addToCart = (p) => {
+    const qty = getQty(p.id, p.min_commande);
+    const remise = getRemise(p.remises, qty);
+    const prixFinal = p.prix * (1 - remise / 100);
+    setCart((prev) => ({ ...prev, [p.id]: { qty, prix: prixFinal, nom: p.nom, remise } }));
+  };
+  const cartQty = Object.values(cart).reduce((a, b) => a + b.qty, 0);
+  const cartTotal = Object.values(cart).reduce((acc, item) => acc + item.prix * item.qty, 0);
   const submitOrder = () => { setModalOpen(false); setSuccess(true); setCart({}); };
 
   return (
     <>
       <Head><title>Winxin — Import B2B Usines Certifiées</title></Head>
       <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fff; color: #1a1a1a; }
-        :root { --red: #E24B4A; --red-dark: #A32D2D; --red-light: #FCEBEB; --red-border: #F7C1C1; --muted: #6b6b6b; --bg2: #f7f6f2; --border: rgba(0,0,0,0.1); --radius-md: 8px; --radius-lg: 12px; }
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#fff; color:#1a1a1a; }
+        :root { --red:#E24B4A; --red-dark:#A32D2D; --red-light:#FCEBEB; --red-border:#F7C1C1; --muted:#6b6b6b; --bg2:#f7f6f2; --border:rgba(0,0,0,0.1); --radius-md:8px; --radius-lg:12px; }
         nav { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:#fff; border-bottom:0.5px solid var(--border); position:sticky; top:0; z-index:50; }
-        .logo { font-size:21px; font-weight:500; letter-spacing:-0.5px; }
+        .logo { font-size:21px; font-weight:500; }
         .logo span { color:var(--red); }
         .nav-links { display:flex; gap:18px; font-size:13px; color:var(--muted); }
         .nav-cta { background:var(--red); color:#fff; border:none; padding:8px 18px; border-radius:var(--radius-md); font-size:13px; cursor:pointer; font-weight:500; }
@@ -74,22 +79,15 @@ export default function Home() {
         h1 { font-size:34px; font-weight:500; line-height:1.2; max-width:580px; margin-bottom:14px; }
         h1 em { font-style:normal; color:var(--red); }
         .hero p { font-size:15px; color:var(--muted); max-width:500px; line-height:1.7; margin-bottom:28px; }
-        .hero-btns { display:flex; gap:10px; flex-wrap:wrap; }
+        .hero-btns { display:flex; gap:10px; }
         .btn-primary { background:var(--red); color:#fff; border:none; padding:11px 24px; border-radius:var(--radius-md); font-size:14px; cursor:pointer; font-weight:500; }
         .btn-ghost { background:transparent; border:0.5px solid var(--border); padding:11px 24px; border-radius:var(--radius-md); font-size:14px; cursor:pointer; }
         .certifs { display:flex; flex-wrap:wrap; border-bottom:0.5px solid var(--border); background:var(--bg2); }
         .certif-item { flex:1; min-width:140px; padding:14px 18px; border-right:0.5px solid var(--border); display:flex; align-items:center; gap:10px; }
         .certif-item:last-child { border-right:none; }
-        .certif-badge { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+        .certif-badge { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; }
         .certif-label { font-size:12px; font-weight:500; }
         .certif-sub { font-size:11px; color:var(--muted); }
-        .who { padding:28px 24px; border-bottom:0.5px solid var(--border); }
-        .who-title { font-size:11px; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; }
-        .who-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
-        .who-card { background:var(--bg2); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px; }
-        .who-icon { font-size:18px; margin-bottom:6px; }
-        .who-label { font-size:13px; font-weight:500; margin-bottom:2px; }
-        .who-desc { font-size:11px; color:var(--muted); line-height:1.4; }
         .transport-strip { background:var(--red-light); border-bottom:0.5px solid var(--red-border); padding:14px 24px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
         .transport-icon { font-size:22px; }
         .transport-text strong { font-size:13px; color:var(--red-dark); display:block; margin-bottom:2px; }
@@ -105,19 +103,32 @@ export default function Home() {
         .section-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px; }
         .section-title { font-size:16px; font-weight:500; }
         .count-label { font-size:13px; color:var(--muted); }
-        .products-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:12px; }
-        .product-card { background:#fff; border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; cursor:pointer; transition:border-color .15s; }
+        .products-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+        .product-card { background:#fff; border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:border-color .15s; }
         .product-card:hover { border-color:var(--red); }
-        .product-img { height:108px; background:var(--bg2); display:flex; align-items:center; justify-content:center; font-size:34px; border-bottom:0.5px solid var(--border); position:relative; }
+        .product-img { height:160px; background:var(--bg2); display:flex; align-items:center; justify-content:center; border-bottom:0.5px solid var(--border); position:relative; overflow:hidden; }
+        .product-img img { width:100%; height:100%; object-fit:cover; }
+        .product-img-placeholder { font-size:40px; }
         .cert-dot { position:absolute; top:8px; right:8px; background:#EAF3DE; color:#3B6D11; font-size:10px; padding:2px 6px; border-radius:10px; }
-        .product-info { padding:10px 12px; }
-        .cat-badge { display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; margin-bottom:5px; font-weight:500; }
-        .product-name { font-size:13px; font-weight:500; margin-bottom:3px; line-height:1.3; }
-        .product-moq { font-size:11px; color:var(--muted); margin-bottom:6px; }
-        .product-price { font-size:15px; font-weight:500; color:var(--red); margin-bottom:9px; }
-        .product-price span { font-size:11px; font-weight:400; color:var(--muted); }
-        .add-btn { width:100%; background:var(--bg2); border:0.5px solid var(--border); padding:7px; border-radius:var(--radius-md); font-size:12px; cursor:pointer; transition:all .12s; }
-        .add-btn:hover, .add-btn.added { background:var(--red-light); color:var(--red-dark); border-color:var(--red-border); }
+        .product-info { padding:12px; }
+        .cat-badge { display:inline-block; font-size:10px; padding:2px 7px; border-radius:10px; margin-bottom:6px; font-weight:500; }
+        .product-name { font-size:14px; font-weight:500; margin-bottom:4px; line-height:1.3; }
+        .product-min { font-size:11px; color:var(--muted); margin-bottom:8px; }
+        .product-price-big { font-size:22px; font-weight:500; color:var(--red); margin-bottom:2px; }
+        .product-price-unit { font-size:11px; color:var(--muted); margin-bottom:8px; }
+        .prix-remise { font-size:11px; color:#3B6D11; font-weight:500; margin-left:6px; }
+        .remises-bar { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:10px; }
+        .remise-pill { font-size:10px; padding:2px 7px; border-radius:10px; font-weight:500; background:#EAF3DE; color:#3B6D11; border:0.5px solid #C0DD97; }
+        .remise-pill.active { background:#3B6D11; color:#fff; }
+        .qty-row { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+        .qty-btn { width:28px; height:28px; border-radius:50%; border:0.5px solid var(--border); background:var(--bg2); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:500; transition:all .12s; flex-shrink:0; }
+        .qty-btn:hover { border-color:var(--red); color:var(--red); }
+        .qty-input { width:52px; text-align:center; border:0.5px solid var(--border); border-radius:6px; padding:4px; font-size:14px; font-weight:500; outline:none; }
+        .qty-total { font-size:12px; color:var(--muted); margin-left:auto; white-space:nowrap; }
+        .add-btn { width:100%; background:var(--red); color:#fff; border:none; padding:9px; border-radius:var(--radius-md); font-size:13px; cursor:pointer; font-weight:500; }
+        .add-btn:hover { opacity:0.9; }
+        .add-btn.added { background:#EAF3DE; color:#3B6D11; border:0.5px solid #C0DD97; }
+        .loading { text-align:center; padding:60px 24px; font-size:14px; color:var(--muted); }
         .how { background:var(--bg2); border-top:0.5px solid var(--border); border-bottom:0.5px solid var(--border); }
         .how-title { padding:18px 24px 12px; font-size:15px; font-weight:500; }
         .steps-row { display:grid; grid-template-columns:repeat(5,1fr); }
@@ -183,15 +194,6 @@ export default function Home() {
         <div className="certif-item"><div className="certif-badge" style={{background:"#FCEBEB"}}>💳</div><div><div className="certif-label">Paiement sécurisé</div><div className="certif-sub">Stripe ou virement bancaire</div></div></div>
       </div>
 
-      <div className="who">
-        <div className="who-title">Ce service est fait pour vous si vous êtes…</div>
-        <div className="who-grid">
-          {[["🏪","Commerçant","Boutique physique, magasin"],["🛒","Revendeur","E-commerce, marketplace"],["🏢","Grossiste","Distribution en gros"],["🏭","Importateur","Achat conteneur, import régulier"],["🎪","Bazariste","Marchés, foires, braderies"],["🏗️","Entreprise","Équipement, fournitures"]].map(([icon,label,desc])=>(
-            <div className="who-card" key={label}><div className="who-icon">{icon}</div><div className="who-label">{label}</div><div className="who-desc">{desc}</div></div>
-          ))}
-        </div>
-      </div>
-
       <div className="transport-strip">
         <div className="transport-icon">🚢</div>
         <div className="transport-text">
@@ -209,7 +211,7 @@ export default function Home() {
         <div className="cats-bar-label">Filtrer par catégorie</div>
         <div className="cat-tabs">
           {categories.map((c) => (
-            <div key={c.id} className={`cat-tab${activecat === c.id ? " active" : ""}`} onClick={() => setActivecat(c.id)}>{c.label}</div>
+            <div key={c.id} className={"cat-tab" + (activecat === c.id ? " active" : "")} onClick={() => setActivecat(c.id)}>{c.label}</div>
           ))}
         </div>
       </div>
@@ -219,26 +221,61 @@ export default function Home() {
           <div className="section-title">{activecat === "tous" ? "Tous les produits" : getCat(activecat).label}</div>
           <div className="count-label">{filteredProducts.length} références</div>
         </div>
-        <div className="products-grid">
-          {filteredProducts.map((p) => {
-            const c = getCat(p.categorie);
-            const inCart = cart[p.id] || 0;
-            return (
-              <div className="product-card" key={p.id}>
-                <div className="product-img">{p.emoji}<span className="cert-dot">✓ Certifié</span></div>
-                <div className="product-info">
-                  <span className="cat-badge" style={{background:c.bg, color:c.color}}>{c.label}</span>
-                  <div className="product-name">{p.nom}</div>
-                  <div className="product-moq">{p.moq}</div>
-                  <div className="product-price">{Number(p.prix).toFixed(2)} <span>{p.unite}</span></div>
-                  <button className={`add-btn${inCart ? " added" : ""}`} onClick={() => addToCart(p.id)}>
-                    {inCart ? `✓ Ajouté (${inCart})` : "+ Ajouter"}
-                  </button>
+        {loading ? (
+          <div className="loading">Chargement des produits...</div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="loading">Aucun produit dans cette catégorie.</div>
+        ) : (
+          <div className="products-grid">
+            {filteredProducts.map((p) => {
+              const c = getCat(p.categorie);
+              const inCart = cart[p.id];
+              const min = p.min_commande || 1;
+              const qty = getQty(p.id, min);
+              const remise = getRemise(p.remises, qty);
+              const prixFinal = p.prix * (1 - remise / 100);
+              const totalLigne = (prixFinal * qty).toFixed(2);
+              return (
+                <div className="product-card" key={p.id}>
+                  <div className="product-img">
+                    {p.image_url ? <img src={p.image_url} alt={p.nom} /> : <span className="product-img-placeholder">{p.emoji || "📦"}</span>}
+                    <span className="cert-dot">✓ Certifié</span>
+                  </div>
+                  <div className="product-info">
+                    <span className="cat-badge" style={{background:c.bg, color:c.color}}>{c.label}</span>
+                    <div className="product-name">{p.nom}</div>
+                    <div className="product-min">Minimum de commande : {min} pcs</div>
+                    <div className="product-price-big">
+                      {prixFinal.toFixed(2)} <span style={{fontSize:"13px"}}>{p.unite}</span>
+                      {remise > 0 && <span className="prix-remise">−{remise}%</span>}
+                    </div>
+                    <div className="product-price-unit">
+                      {remise > 0 ? <span>Prix remisé · <span style={{textDecoration:"line-through",color:"var(--muted)"}}>{Number(p.prix).toFixed(2)}€</span></span> : "Prix à l'unité"}
+                    </div>
+                    {p.remises && Array.isArray(p.remises) && p.remises.length > 0 && (
+                      <div className="remises-bar">
+                        {p.remises.map((r) => (
+                          <span key={r.qte} className={"remise-pill" + (qty >= r.qte ? " active" : "")}>
+                            -{r.pct}% dès {r.qte} pcs
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="qty-row">
+                      <button className="qty-btn" onClick={() => setQty(p.id, qty - 1, min)}>−</button>
+                      <input type="number" className="qty-input" value={qty} min={min} onChange={(e) => setQty(p.id, e.target.value, min)} />
+                      <button className="qty-btn" onClick={() => setQty(p.id, qty + 1, min)}>+</button>
+                      <span className="qty-total">= {totalLigne} €</span>
+                    </div>
+                    <button className={"add-btn" + (inCart ? " added" : "")} onClick={() => addToCart(p)}>
+                      {inCart ? "✓ Dans le panier" : "Ajouter au panier"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="how">
