@@ -190,7 +190,7 @@ export default function Home() {
       <div className="certifs">
         <div className="certif-item"><div className="certif-badge" style={{background:"#EAF3DE"}}>✓</div><div><div className="certif-label">Usines certifiées</div><div className="certif-sub">CE, ISO 9001, RoHS, SGS</div></div></div>
         <div className="certif-item"><div className="certif-badge" style={{background:"#E6F1FB"}}>🚢</div><div><div className="certif-label">Transport géré</div><div className="certif-sub">Mer, air, express — de A à Z</div></div></div>
-        <div className="certif-item"><div className="certif-badge" style={{background:"#FAEEDA"}}>📦</div><div><div className="certif-label">MOQ accessible</div><div className="certif-sub">Dès 50 unités selon produit</div></div></div>
+        <div className="certif-item"><div className="certif-badge" style={{background:"#FAEEDA"}}>📦</div><div><div className="certif-label">MOQ accessible</div><div className="certif-sub">Dès 5 unités selon produit</div></div></div>
         <div className="certif-item"><div className="certif-badge" style={{background:"#FCEBEB"}}>💳</div><div><div className="certif-label">Paiement sécurisé</div><div className="certif-sub">Stripe ou virement bancaire</div></div></div>
       </div>
 
